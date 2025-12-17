@@ -421,7 +421,7 @@ const Settings: React.FC = () => {
            )}
 
            {/* --- DASHBOARD LAYOUT & UI TAB --- */}
-           {activeTab === 'Dashboard' && settings ? (
+           {activeTab === 'Dashboard' && settings && (
              <div className="space-y-8 animate-fade-in">
                 <div>
                   <h3 className="text-lg font-bold text-slate-100">Dashboard Layout & UI Preferences</h3>
@@ -530,10 +530,6 @@ const Settings: React.FC = () => {
                       Force Save
                    </button>
                 </div>
-             </div>
-           ) : (
-             <div className="flex justify-center py-20">
-               <Loader2 className="w-8 h-8 text-primary animate-spin" />
              </div>
            )}
 
