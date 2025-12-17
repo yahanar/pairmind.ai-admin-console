@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { User, UserRole } from '../types';
 import { UserService } from '../services';
 import { useGlobal } from '../store';
 import { 
   UserPlus, MoreHorizontal, Shield, Mail, Check, X, 
   Trash2, Edit, Power, Lock, Search, Filter, AlertTriangle, Save, ChevronDown, Loader2,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Eye, Bell, Copy, Download
 } from 'lucide-react';
 
 // Extended interface for UI state management
@@ -224,6 +225,192 @@ const DeleteConfirmationModal: React.FC<DeleteModalProps> = ({ userName, onClose
   </div>
 );
 
+// --- View User Profile Modal ---
+interface ViewUserProfileModalProps {
+  user: UserUI;
+  onClose: () => void;
+  onEdit: () => void;
+}
+
+const ViewUserProfileModal: React.FC<ViewUserProfileModalProps> = ({ user, onClose, onEdit }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="absolute inset-0 bg-background/60 backdrop-blur-md transition-all duration-300" onClick={onClose}></div>
+    <div className="relative bg-surface border border-white/10 w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in z-10">
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex items-center gap-4">
+          <img src={user.avatar} alt={user.name} className="w-16 h-16 rounded-full border-2 border-primary/50" />
+          <div>
+            <h3 className="text-xl font-bold text-slate-100">{user.name}</h3>
+            <p className="text-sm text-slate-400 flex items-center gap-1 mt-1">
+              <Mail className="w-3 h-3" /> {user.email}
+            </p>
+          </div>
+        </div>
+        <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5"/></button>
+      </div>
+
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-input p-4 rounded-xl border border-white/5">
+            <div className="text-xs text-slate-500 uppercase font-bold mb-2">Role</div>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+              user.role === 'super-admin' ? 'bg-primary/10 text-primary border-primary/20' :
+              user.role === 'tenant-admin' ? 'bg-accent/10 text-accent border-accent/20' :
+              'bg-slate-700/50 text-slate-400 border-slate-600/50'
+            }`}>
+              <Shield className="w-3 h-3" />
+              {user.role}
+            </span>
+          </div>
+
+          <div className="bg-input p-4 rounded-xl border border-white/5">
+            <div className="text-xs text-slate-500 uppercase font-bold mb-2">Status</div>
+            <span className={`text-xs font-medium px-2 py-1 rounded border ${
+              user.status === 'Active' 
+              ? 'text-success border-success/20 bg-success/5' 
+              : 'text-slate-400 border-slate-600 bg-white/5'
+            }`}>
+              {user.status}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-input p-4 rounded-xl border border-white/5">
+          <div className="text-xs text-slate-500 uppercase font-bold mb-2">Last Active</div>
+          <div className="text-sm text-slate-300 font-mono">{user.lastActive}</div>
+        </div>
+
+        {user.phone && (
+          <div className="bg-input p-4 rounded-xl border border-white/5">
+            <div className="text-xs text-slate-500 uppercase font-bold mb-2">Phone Number</div>
+            <div className="text-sm text-slate-300">{user.phone}</div>
+          </div>
+        )}
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="text-xs text-slate-500 uppercase font-bold mb-3">Recent Activity</div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-success"></div>
+              <span>Logged in from 192.168.1.1</span>
+              <span className="text-slate-600 ml-auto">2h ago</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+              <span>Updated profile settings</span>
+              <span className="text-slate-600 ml-auto">1d ago</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-accent"></div>
+              <span>Created new instance</span>
+              <span className="text-slate-600 ml-auto">3d ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-white/5">
+        <button onClick={onClose} className="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 text-sm font-medium transition-colors">Close</button>
+        <button 
+          onClick={() => { onEdit(); onClose(); }}
+          className="px-4 py-2 rounded-lg bg-primary hover:bg-primaryHover text-white text-sm font-medium shadow-neon flex items-center gap-2 transition-all"
+        >
+          <Edit className="w-4 h-4" /> Edit Profile
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// --- Send Notification Modal ---
+interface SendNotificationModalProps {
+  user: UserUI;
+  onClose: () => void;
+  onSend: (subject: string, message: string, method: string) => void;
+}
+
+const SendNotificationModal: React.FC<SendNotificationModalProps> = ({ user, onClose, onSend }) => {
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [method, setMethod] = useState('email');
+
+  const handleSend = () => {
+    if (!subject || !message) return;
+    onSend(subject, message, method);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-background/60 backdrop-blur-md transition-all duration-300" onClick={onClose}></div>
+      <div className="relative bg-surface border border-white/10 w-full max-w-md rounded-2xl shadow-2xl p-6 animate-fade-in z-10">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+            <Bell className="w-5 h-5 text-primary" /> Send Notification
+          </h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5"/></button>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-4 flex items-center gap-3">
+          <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full" />
+          <div>
+            <div className="text-sm font-bold text-slate-200">{user.name}</div>
+            <div className="text-xs text-slate-500">{user.email}</div>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Delivery Method</label>
+            <select 
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              className="w-full bg-input border border-white/10 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-primary/50"
+            >
+              <option value="email">Email</option>
+              <option value="in-app">In-App Notification</option>
+              <option value="both">Both</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Subject</label>
+            <input 
+              type="text" 
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full bg-input border border-white/10 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-primary/50 placeholder:text-slate-600"
+              placeholder="Important Update"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Message</label>
+            <textarea 
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={4}
+              className="w-full bg-input border border-white/10 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-primary/50 placeholder:text-slate-600 resize-none"
+              placeholder="Type your message here..."
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-white/5">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 text-sm font-medium transition-colors">Cancel</button>
+          <button 
+            onClick={handleSend}
+            disabled={!subject || !message}
+            className="px-4 py-2 rounded-lg bg-primary hover:bg-primaryHover text-white text-sm font-medium shadow-neon flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Bell className="w-4 h-4" /> Send Notification
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Main Component ---
 const Users: React.FC = () => {
   const { notify } = useGlobal();
@@ -249,6 +436,8 @@ const Users: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserUI | null>(null);
   const [userToDelete, setUserToDelete] = useState<UserUI | null>(null);
+  const [viewingUser, setViewingUser] = useState<UserUI | null>(null);
+  const [notifyingUser, setNotifyingUser] = useState<UserUI | null>(null);
 
   // Load Users
   useEffect(() => {
@@ -370,6 +559,36 @@ const Users: React.FC = () => {
     notify('Password reset email sent.', 'success');
   };
 
+  const handleDuplicateUser = (user: UserUI) => {
+    const duplicatedUser: UserUI = {
+      ...user,
+      id: `u-${Date.now()}`,
+      name: `${user.name} (Copy)`,
+      email: `copy.${user.email}`,
+      status: 'Active'
+    };
+    setUsers([duplicatedUser, ...users]);
+    setOpenMenuId(null);
+    notify('User duplicated successfully.', 'success');
+  };
+
+  const handleExportUser = (user: UserUI) => {
+    const dataStr = JSON.stringify(user, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `user-${user.id}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setOpenMenuId(null);
+    notify('User data exported.', 'success');
+  };
+
+  const handleSendNotification = (subject: string, message: string, method: string) => {
+    notify(`Notification sent via ${method}.`, 'success');
+  };
+
   const getRoleBadgeStyle = (role: UserRole) => {
     switch (role) {
       case UserRole.SUPER_ADMIN: return 'bg-primary/10 text-primary border-primary/20';
@@ -379,12 +598,14 @@ const Users: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in relative min-h-[500px]">
+    <div className="space-y-6 animate-fade-in min-h-[500px]">
       
       {/* Modals */}
       {showCreateModal && <UserFormModal onClose={() => setShowCreateModal(false)} onSave={handleCreate} />}
       {editingUser && <UserFormModal initialData={editingUser} onClose={() => setEditingUser(null)} onSave={handleUpdate} />}
       {userToDelete && <DeleteConfirmationModal userName={userToDelete.name} onClose={() => setUserToDelete(null)} onConfirm={handleDelete} />}
+      {viewingUser && <ViewUserProfileModal user={viewingUser} onClose={() => setViewingUser(null)} onEdit={() => setEditingUser(viewingUser)} />}
+      {notifyingUser && <SendNotificationModal user={notifyingUser} onClose={() => setNotifyingUser(null)} onSend={handleSendNotification} />}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -564,9 +785,9 @@ const Users: React.FC = () => {
       </div>
 
       {/* Fixed Position Menu Portal */}
-      {openMenuId && menuPosition && (
+      {openMenuId && menuPosition && ReactDOM.createPortal(
         <div 
-          className="user-menu fixed w-48 bg-[#0F2E45] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 animate-fade-in origin-top-right"
+          className="user-menu fixed w-48 bg-[#0F2E45] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-[9999] animate-fade-in origin-top-right"
           style={{ top: menuPosition.top, left: menuPosition.left }}
         >
             {(() => {
@@ -575,11 +796,27 @@ const Users: React.FC = () => {
               const isActive = user.status === 'Active';
               return (
                 <>
+                  {/* View Section */}
+                  <button 
+                    onClick={() => { setViewingUser(user); setOpenMenuId(null); }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> View Profile
+                  </button>
                   <button 
                     onClick={() => { setEditingUser(user); setOpenMenuId(null); }}
                     className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
                   >
                     <Edit className="w-3.5 h-3.5" /> Edit Profile
+                  </button>
+                  
+                  {/* Security Section */}
+                  <div className="border-t border-white/5 my-1"></div>
+                  <button 
+                    onClick={() => handleResetPassword(user.id)}
+                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
+                  >
+                    <Lock className="w-3.5 h-3.5" /> Reset Password
                   </button>
                   <button 
                     onClick={() => handleToggleStatus(user)}
@@ -589,12 +826,29 @@ const Users: React.FC = () => {
                   >
                     <Power className="w-3.5 h-3.5" /> {isActive ? 'Deactivate' : 'Activate'}
                   </button>
+
+                  {/* Admin Actions */}
+                  <div className="border-t border-white/5 my-1"></div>
                   <button 
-                    onClick={() => handleResetPassword(user.id)}
+                    onClick={() => { setNotifyingUser(user); setOpenMenuId(null); }}
                     className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
                   >
-                    <Lock className="w-3.5 h-3.5" /> Reset Password
+                    <Bell className="w-3.5 h-3.5" /> Send Notification
                   </button>
+                  <button 
+                    onClick={() => handleDuplicateUser(user)}
+                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
+                  >
+                    <Copy className="w-3.5 h-3.5" /> Duplicate User
+                  </button>
+                  <button 
+                    onClick={() => handleExportUser(user)}
+                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Export Data
+                  </button>
+
+                  {/* Destructive Actions */}
                   <div className="border-t border-white/5 my-1"></div>
                   <button 
                     onClick={() => { setUserToDelete(user); setOpenMenuId(null); }}
@@ -605,7 +859,8 @@ const Users: React.FC = () => {
                 </>
               );
             })()}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

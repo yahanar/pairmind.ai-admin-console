@@ -5,7 +5,8 @@ import { useGlobal } from '../store';
 import {
   LayoutDashboard, Server, Users, Settings,
   MessageSquare, Calendar, LogOut, Bell,
-  Menu, X, Box, PieChart, Puzzle, Check, Trash2, Eye, AlertCircle, CheckCircle, Info, AlertTriangle
+  Menu, X, Box, PieChart, Puzzle, Check, Trash2, Eye, AlertCircle, CheckCircle, Info, AlertTriangle,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -16,17 +17,19 @@ const NavItem: React.FC<{
   icon: React.ReactNode;
   label: string;
   active: boolean;
-  onClick: () => void
-}> = ({ icon, label, active, onClick }) => (
+  onClick: () => void;
+  collapsed?: boolean;
+}> = ({ icon, label, active, onClick, collapsed = false }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${active
+    className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-4 py-3 text-sm font-medium rounded-xl transition-all ${active
         ? 'bg-secondary text-white border border-white/10 shadow-lg'
         : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
       }`}
+    title={collapsed ? label : undefined}
   >
     {icon}
-    <span>{label}</span>
+    {!collapsed && <span>{label}</span>}
   </button>
 );
 
@@ -34,6 +37,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, currentView, navigate, logout, notifications, markNotificationAsRead, clearNotification, clearAllNotifications } = useGlobal();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -86,52 +90,73 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="min-h-screen bg-background flex text-slate-300">
 
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 border-r border-white/5 bg-sidebar-gradient fixed h-full z-30">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-8 h-8 relative flex items-center justify-center">
-            <div className="absolute inset-0 rounded-lg bg-gold-gradient transform -rotate-3 opacity-90"></div>
-            <div className="absolute inset-0 rounded-lg bg-teal-gradient transform rotate-6 opacity-80 mix-blend-overlay"></div>
-            <div className="w-2 h-2 bg-white rounded-full z-10 shadow-sm"></div>
+      <aside className={`hidden lg:flex flex-col border-r border-white/5 bg-sidebar-gradient fixed h-full z-30 transition-all duration-300 ${sidebarCollapsed ? 'w-20' : 'w-64'}`}>
+        {/* Logo/Header with Toggle Button */}
+        <div className={`p-6 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} relative`}>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 relative flex items-center justify-center flex-shrink-0">
+              <div className="absolute inset-0 rounded-lg bg-gold-gradient transform -rotate-3 opacity-90"></div>
+              <div className="absolute inset-0 rounded-lg bg-teal-gradient transform rotate-6 opacity-80 mix-blend-overlay"></div>
+              <div className="w-2 h-2 bg-white rounded-full z-10 shadow-sm"></div>
+            </div>
+            {!sidebarCollapsed && <span className="text-xl font-bold text-slate-100 tracking-tight whitespace-nowrap">PairMind.AI</span>}
           </div>
-          <span className="text-xl font-bold text-slate-100 tracking-tight">PairMind.AI</span>
+          
+          {/* Toggle Button at Top */}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          </button>
         </div>
 
-        <div className="flex-1 px-4 space-y-2 py-4">
+        {/* Navigation */}
+        <div className="flex-1 px-4 space-y-2 py-4 overflow-y-auto">
           <NavItem
             icon={<LayoutDashboard className="w-5 h-5" />}
             label="Dashboard"
             active={currentView === 'DASHBOARD'}
             onClick={() => navigate('DASHBOARD')}
+            collapsed={sidebarCollapsed}
           />
           <NavItem
             icon={<Server className="w-5 h-5" />}
             label="Instances"
             active={currentView === 'INSTANCES' || currentView === 'INSTANCE_DETAIL'}
             onClick={() => navigate('INSTANCES')}
+            collapsed={sidebarCollapsed}
           />
           <NavItem
             icon={<PieChart className="w-5 h-5" />}
             label="Analytics"
             active={currentView === 'ANALYTICS'}
             onClick={() => navigate('ANALYTICS')}
+            collapsed={sidebarCollapsed}
           />
 
           {(user.role === UserRole.TENANT_ADMIN || user.role === UserRole.SUPER_ADMIN) && (
             <>
-              <div className="pt-4 pb-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Management
-              </div>
+              {!sidebarCollapsed && (
+                <div className="pt-4 pb-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Management
+                </div>
+              )}
+              {sidebarCollapsed && <div className="border-t border-white/10 my-2"></div>}
               <NavItem
                 icon={<Users className="w-5 h-5" />}
                 label="Users"
                 active={currentView === 'USERS'}
                 onClick={() => navigate('USERS')}
+                collapsed={sidebarCollapsed}
               />
               <NavItem
                 icon={<Calendar className="w-5 h-5" />}
                 label="Appointments"
                 active={currentView === 'APPOINTMENTS'}
                 onClick={() => navigate('APPOINTMENTS')}
+                collapsed={sidebarCollapsed}
               />
             </>
           )}
@@ -143,49 +168,66 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 label="Tenants"
                 active={currentView === 'TENANTS'}
                 onClick={() => navigate('TENANTS')}
+                collapsed={sidebarCollapsed}
               />
               <NavItem
                 icon={<Puzzle className="w-5 h-5" />}
                 label="MCP Providers"
                 active={currentView === 'MCP_MARKETPLACE'}
                 onClick={() => navigate('MCP_MARKETPLACE')}
+                collapsed={sidebarCollapsed}
               />
             </>
           )}
 
-          <div className="pt-4 pb-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Tools
-          </div>
+          {!sidebarCollapsed && (
+            <div className="pt-4 pb-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Tools
+            </div>
+          )}
+          {sidebarCollapsed && <div className="border-t border-white/10 my-2"></div>}
           <NavItem
             icon={<MessageSquare className="w-5 h-5" />}
             label="Chat"
             active={currentView === 'CHAT'}
             onClick={() => navigate('CHAT')}
+            collapsed={sidebarCollapsed}
           />
           <NavItem
             icon={<Settings className="w-5 h-5" />}
             label="Settings"
             active={currentView === 'SETTINGS'}
             onClick={() => navigate('SETTINGS')}
+            collapsed={sidebarCollapsed}
           />
         </div>
 
+        {/* User Profile */}
         <div className="p-4 border-t border-white/5">
-          <div className="bg-surface/50 rounded-xl p-3 flex items-center gap-3 border border-white/5 hover:bg-surface transition-colors cursor-pointer group">
-            <img src={user.avatar} alt="User" className="w-10 h-10 rounded-lg border border-white/10 group-hover:border-primary/50 transition-colors" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-100 truncate">{user.name}</p>
-              <p className="text-xs text-slate-500 truncate">{user.role}</p>
-            </div>
-            <button onClick={logout} className="text-slate-500 hover:text-white transition-colors">
-              <LogOut className="w-4 h-4" />
-            </button>
+          <div className={`bg-surface/50 rounded-xl p-3 flex items-center border border-white/5 hover:bg-surface transition-colors cursor-pointer group ${sidebarCollapsed ? 'flex-col gap-2 justify-center' : 'gap-3'}`}>
+            <img src={user.avatar} alt="User" className={`rounded-lg border border-white/10 group-hover:border-primary/50 transition-colors ${sidebarCollapsed ? 'w-8 h-8' : 'w-10 h-10'}`} />
+            {!sidebarCollapsed && (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-100 truncate">{user.name}</p>
+                  <p className="text-xs text-slate-500 truncate">{user.role}</p>
+                </div>
+                <button onClick={logout} className="text-slate-500 hover:text-white transition-colors">
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </>
+            )}
+            {sidebarCollapsed && (
+              <button onClick={logout} className="text-slate-500 hover:text-white transition-colors w-full flex justify-center">
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen relative">
+      <div className={`flex-1 flex flex-col min-h-screen relative transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
 
         {/* Notification & Status - Floating Top Right */}
         <div className="absolute top-6 right-6 z-20 flex items-center gap-4">

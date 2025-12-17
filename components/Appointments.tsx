@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { Appointment } from '../types';
 import { AppointmentService } from '../services';
 import { useGlobal } from '../store';
@@ -7,7 +8,8 @@ import {
   Calendar, Search, Filter, MoreHorizontal, CheckCircle, 
   Clock, XCircle, Trash2, Edit, ExternalLink, X, RefreshCw,
   ChevronDown, Check, AlertTriangle, Calendar as CalendarIcon, User, Bot,
-  Plus, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Save, Link, AlertOctagon
+  Plus, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Save, Link, AlertOctagon,
+  Star, Clipboard, FileText, Mail
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
@@ -368,6 +370,74 @@ const AppointmentDetailsModal: React.FC<{
    </div>
 );
 
+// --- Change Bot Assignment Modal ---
+const ChangeBotModal: React.FC<{
+  appointment: Appointment;
+  onClose: () => void;
+  onConfirm: (newBot: string) => void;
+}> = ({ appointment, onClose, onConfirm }) => {
+  const [selectedBot, setSelectedBot] = useState(appointment.assignedBot);
+  const [reason, setReason] = useState('');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+       <div className="absolute inset-0 bg-background/60 backdrop-blur-md transition-all duration-300" onClick={onClose}></div>
+       <div className="relative bg-surface border border-white/10 w-full max-w-md rounded-2xl shadow-2xl p-6 animate-fade-in z-10">
+          <h3 className="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
+             <Bot className="w-5 h-5 text-primary" /> Change Bot Assignment
+          </h3>
+          
+          <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-4">
+             <div className="text-xs text-slate-500 mb-1">Customer</div>
+             <div className="text-sm font-bold text-slate-200">{appointment.customerName}</div>
+             <div className="text-xs text-slate-500 mt-2">Current Bot</div>
+             <div className="text-sm text-slate-300 font-mono flex items-center gap-2">
+                <Bot className="w-3 h-3 text-primary" /> {appointment.assignedBot}
+             </div>
+          </div>
+
+          <div className="space-y-4">
+             <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">New Bot</label>
+                <select 
+                  value={selectedBot}
+                  onChange={(e) => setSelectedBot(e.target.value)}
+                  className="w-full bg-input border border-white/10 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-primary/50"
+                >
+                   <option value="Sales-Bot-01">Sales-Bot-01</option>
+                   <option value="Support-Alpha">Support-Alpha</option>
+                   <option value="Onboarding-Guide">Onboarding-Guide</option>
+                   <option value="Demo-Specialist">Demo-Specialist</option>
+                </select>
+             </div>
+
+             <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Reason (Optional)</label>
+                <textarea 
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={3}
+                  className="w-full bg-input border border-white/10 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-primary/50 placeholder:text-slate-600 resize-none"
+                  placeholder="Why are you reassigning this appointment?"
+                />
+             </div>
+          </div>
+
+          <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-white/5">
+             <button onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors">Cancel</button>
+             <button 
+               onClick={() => onConfirm(selectedBot)}
+               disabled={selectedBot === appointment.assignedBot}
+               className="px-4 py-2 bg-primary hover:bg-primaryHover text-white rounded-lg text-sm font-medium shadow-neon transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+             >
+                <Bot className="w-4 h-4" /> Reassign Bot
+             </button>
+          </div>
+       </div>
+    </div>
+  );
+};
+
 
 const Appointments: React.FC = () => {
   const { appointments, setAppointments, notify } = useGlobal();
@@ -388,6 +458,7 @@ const Appointments: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [reschedulingAppointment, setReschedulingAppointment] = useState<Appointment | null>(null);
   const [deletingAppointment, setDeletingAppointment] = useState<Appointment | null>(null);
+  const [changeBotAppointment, setChangeBotAppointment] = useState<Appointment | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const calcMenuPosition = (rect: DOMRect) => {
@@ -516,8 +587,65 @@ const Appointments: React.FC = () => {
      }
   };
 
+  const handleChangeBot = async (newBot: string) => {
+     if (changeBotAppointment) {
+        const updatedApp = { ...changeBotAppointment, assignedBot: newBot };
+        const updatedList = appointments.map(a => a.id === updatedApp.id ? updatedApp : a);
+        await setAppointments(updatedList);
+        setChangeBotAppointment(null);
+        setOpenMenuId(null);
+        notify(`Bot reassigned to ${newBot}.`, 'success');
+     }
+  };
+
+  const handleTogglePriority = async (appointment: Appointment) => {
+     const isPriority = (appointment as any).isPriority || false;
+     const updatedApp = { ...appointment, isPriority: !isPriority } as any;
+     const updatedList = appointments.map(a => a.id === updatedApp.id ? updatedApp : a);
+     await setAppointments(updatedList);
+     setOpenMenuId(null);
+     notify(`Appointment ${!isPriority ? 'marked as priority' : 'unmarked as priority'}.`, 'info');
+  };
+
+  const handleCopyMeetingLink = (appointmentId: string) => {
+     const link = `https://app.example.com/meetings/${appointmentId}`;
+     navigator.clipboard.writeText(link);
+     setOpenMenuId(null);
+     notify('Meeting link copied to clipboard.', 'success');
+  };
+
+  const handleSendReminder = (appointmentId: string) => {
+     setOpenMenuId(null);
+     notify('Reminder sent to customer.', 'success');
+  };
+
+  const handleExportAppointment = (appointment: Appointment) => {
+     const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//AI Admin Console//EN
+BEGIN:VEVENT
+UID:${appointment.id}@example.com
+DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z
+DTSTART:${appointment.date.replace(/-/g, '')}T${appointment.time.replace(/:/g, '')}00
+SUMMARY:Appointment with ${appointment.customerName}
+DESCRIPTION:Bot: ${appointment.assignedBot}\\nStatus: ${appointment.status}
+STATUS:${appointment.status === 'Confirmed' ? 'CONFIRMED' : 'TENTATIVE'}
+END:VEVENT
+END:VCALENDAR`;
+     
+     const blob = new Blob([icsContent], { type: 'text/calendar' });
+     const url = URL.createObjectURL(blob);
+     const link = document.createElement('a');
+     link.href = url;
+     link.download = `appointment-${appointment.id}.ics`;
+     link.click();
+     URL.revokeObjectURL(url);
+     setOpenMenuId(null);
+     notify('Appointment exported to calendar.', 'success');
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in relative min-h-[500px]">
+    <div className="space-y-6 animate-fade-in min-h-[500px]">
       
       {/* Modals */}
       {showCreateModal && (
@@ -549,6 +677,13 @@ const Appointments: React.FC = () => {
          <AppointmentDetailsModal 
             appointment={selectedAppointment}
             onClose={() => setSelectedAppointment(null)}
+         />
+      )}
+      {changeBotAppointment && (
+         <ChangeBotModal
+            appointment={changeBotAppointment}
+            onClose={() => setChangeBotAppointment(null)}
+            onConfirm={handleChangeBot}
          />
       )}
 
@@ -604,7 +739,7 @@ const Appointments: React.FC = () => {
       </div>
       
       {/* Table Content */}
-      <div className="bg-surface border border-white/5 rounded-2xl overflow-hidden shadow-sm flex flex-col min-h-[300px]">
+      <div className="bg-surface border border-white/5 rounded-2xl overflow-visible shadow-sm flex flex-col min-h-[300px]">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -662,18 +797,19 @@ const Appointments: React.FC = () => {
                     </td>
                     <td className="p-4 text-right">
                        <div className="relative inline-block text-left">
-                          <button 
-                             onClick={(e) => { 
-                               e.stopPropagation(); 
-                               if (openMenuId === apt.id) {
-                                 setOpenMenuId(null);
-                                 setMenuPosition(null);
-                               } else {
-                               const rect = e.currentTarget.getBoundingClientRect();
-                               setMenuPosition(calcMenuPosition(rect));
-                               setOpenMenuId(apt.id);
-                             }
-                           }}
+                           <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                if (openMenuId === apt.id) {
+                                  setOpenMenuId(null);
+                                  setMenuPosition(null);
+                                } else {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const pos = calcMenuPosition(rect);
+                                  setMenuPosition(pos);
+                                  setOpenMenuId(apt.id);
+                              }
+                            }}
                              className={`action-menu-trigger p-2 rounded-lg transition-colors ${openMenuId === apt.id ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                           >
                              <MoreHorizontal className="w-5 h-5" />
@@ -744,28 +880,73 @@ const Appointments: React.FC = () => {
       </div>
 
       {/* Fixed Position Menu Portal */}
-      {openMenuId && menuPosition && (
+      {openMenuId && menuPosition && ReactDOM.createPortal(
         <div 
-          className="action-menu fixed w-48 bg-[#0F2E45] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 animate-fade-in origin-top-right"
+          className="action-menu fixed w-48 bg-[#0F2E45] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-[9999] animate-fade-in origin-top-right"
           style={{ top: menuPosition.top, left: menuPosition.left }}
         >
             {(() => {
               const apt = appointments.find(a => a.id === openMenuId);
               if (!apt) return null;
+              const isPriority = (apt as any).isPriority || false;
               return (
                 <>
+                  {/* Quick View */}
                   <button 
                     onClick={() => { setSelectedAppointment(apt); setOpenMenuId(null); }}
                     className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
                   >
                       <ExternalLink className="w-3.5 h-3.5" /> View Details
                   </button>
+
+                  {/* Management Section */}
+                  <div className="border-t border-white/5 my-1"></div>
                   <button 
                     onClick={() => { setReschedulingAppointment(apt); setOpenMenuId(null); }}
                     className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
                   >
                       <Edit className="w-3.5 h-3.5" /> Reschedule
                   </button>
+                  <button 
+                    onClick={() => { setChangeBotAppointment(apt); setOpenMenuId(null); }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
+                  >
+                      <Bot className="w-3.5 h-3.5" /> Change Bot
+                  </button>
+                  <button 
+                    onClick={() => handleTogglePriority(apt)}
+                    className={`w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-white/5 flex items-center gap-2 ${
+                      isPriority ? 'text-warning' : 'text-slate-300'
+                    }`}
+                  >
+                      <Star className={`w-3.5 h-3.5 ${isPriority ? 'fill-warning' : ''}`} /> {isPriority ? 'Unmark Priority' : 'Mark as Priority'}
+                  </button>
+
+                  {/* Communication Section */}
+                  <div className="border-t border-white/5 my-1"></div>
+                  <button 
+                    onClick={() => handleSendReminder(apt.id)}
+                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
+                  >
+                      <Mail className="w-3.5 h-3.5" /> Send Reminder
+                  </button>
+                  <button 
+                    onClick={() => handleCopyMeetingLink(apt.id)}
+                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
+                  >
+                      <Clipboard className="w-3.5 h-3.5" /> Copy Meeting Link
+                  </button>
+
+                  {/* Status Changes */}
+                  <div className="border-t border-white/5 my-1"></div>
+                  {apt.status === 'Pending' && (
+                      <button 
+                        onClick={() => handleChangeStatus(apt, 'Confirmed')}
+                        className="w-full text-left px-4 py-2.5 text-xs font-medium text-success hover:bg-white/5 flex items-center gap-2"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" /> Confirm Appointment
+                      </button>
+                  )}
                   {apt.status !== 'Cancelled' && (
                       <button 
                         onClick={() => handleChangeStatus(apt, 'Cancelled')}
@@ -779,9 +960,28 @@ const Appointments: React.FC = () => {
                         onClick={() => handleChangeStatus(apt, 'Confirmed')}
                         className="w-full text-left px-4 py-2.5 text-xs font-medium text-success hover:bg-white/5 flex items-center gap-2"
                       >
-                        <CheckCircle className="w-3.5 h-3.5" /> Confirm Appointment
+                        <CheckCircle className="w-3.5 h-3.5" /> Reactivate
                       </button>
                   )}
+                  {apt.status === 'Confirmed' && (
+                      <button 
+                        onClick={() => handleChangeStatus(apt, 'Pending')}
+                        className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
+                      >
+                        <Clock className="w-3.5 h-3.5" /> Mark as Pending
+                      </button>
+                  )}
+
+                  {/* Data Export */}
+                  <div className="border-t border-white/5 my-1"></div>
+                  <button 
+                    onClick={() => handleExportAppointment(apt)}
+                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/5 flex items-center gap-2"
+                  >
+                      <FileText className="w-3.5 h-3.5" /> Export to Calendar
+                  </button>
+
+                  {/* Destructive Actions */}
                   <div className="border-t border-white/5 my-1"></div>
                   <button 
                     onClick={() => { setDeletingAppointment(apt); setOpenMenuId(null); }}
@@ -792,7 +992,8 @@ const Appointments: React.FC = () => {
                 </>
               );
             })()}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
