@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PairMind.AI Admin Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              background: 'rgb(var(--bg-primary) / <alpha-value>)', 
+              surface: 'rgb(var(--bg-surface) / <alpha-value>)',    
+              surfaceHighlight: 'rgb(var(--bg-surface-highlight) / <alpha-value>)', 
+              input: 'rgb(var(--bg-input) / <alpha-value>)',      
+              
+              primary: 'rgb(var(--color-primary) / <alpha-value>)',    
+              primaryHover: 'rgb(var(--color-primary-hover) / <alpha-value>)',
+              primaryLight: 'rgba(99, 102, 241, 0.1)', 
+              
+              secondary: '#1B4965',
+              accent: '#2DD4BF',
+              accentDark: '#0F766E',
+              gold: '#F59E0B',
+              goldDark: '#D97706',
+              success: '#10B981',
+              warning: '#F59E0B',
+              danger: '#EF4444',
+
+              // Adaptive Slate Scale
+              slate: {
+                 50: 'rgb(var(--slate-50) / <alpha-value>)',
+                 100: 'rgb(var(--slate-100) / <alpha-value>)', 
+                 200: 'rgb(var(--slate-200) / <alpha-value>)',
+                 300: 'rgb(var(--slate-300) / <alpha-value>)',
+                 400: 'rgb(var(--slate-400) / <alpha-value>)',
+                 500: 'rgb(var(--slate-500) / <alpha-value>)',
+                 600: 'rgb(var(--slate-600) / <alpha-value>)',
+                 700: 'rgb(var(--slate-700) / <alpha-value>)',
+                 800: 'rgb(var(--slate-800) / <alpha-value>)',
+                 900: 'rgb(var(--slate-900) / <alpha-value>)',
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            boxShadow: {
+              'neon': '0 0 10px rgba(var(--color-primary), 0.3), 0 0 20px rgba(var(--color-primary), 0.1)',
+              'neon-strong': '0 0 15px rgba(var(--color-primary), 0.6), 0 0 30px rgba(var(--color-primary), 0.2)',
+            },
+            backgroundImage: {
+              'sidebar-gradient': 'linear-gradient(to bottom, rgb(var(--bg-surface)), rgb(var(--bg-primary)))',
+              'gold-gradient': 'linear-gradient(to right, #F59E0B, #D97706)',
+              'teal-gradient': 'linear-gradient(to right, #2DD4BF, #0F766E)',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      :root {
+        /* DARK MODE (Default) */
+        --bg-primary: 4 28 50;           /* #041C32 */
+        --bg-surface: 4 41 58;           /* #04293A */
+        --bg-surface-highlight: 6 54 77; /* #06364d */
+        --bg-input: 3 22 41;             /* #031629 */
+        
+        --color-primary: 99 102 241;     /* #6366F1 Indigo-500 */
+        --color-primary-hover: 79 70 229;
+
+        /* Text Colors (Light text on Dark bg) */
+        --slate-50: 248 250 252;
+        --slate-100: 241 245 249; /* Main text */
+        --slate-200: 226 232 240;
+        --slate-300: 203 213 225;
+        --slate-400: 148 163 184; /* Muted text */
+        --slate-500: 100 116 139;
+        --slate-600: 71 85 105;   /* Borders usually */
+        --slate-700: 51 65 85;
+        --slate-800: 30 41 59;
+        --slate-900: 15 23 42;
+      }
+
+      :root.light {
+        /* LIGHT MODE */
+        --bg-primary: 241 245 249;       /* Slate-100 */
+        --bg-surface: 255 255 255;       /* White */
+        --bg-surface-highlight: 248 250 252; /* Slate-50 */
+        --bg-input: 255 255 255;         /* White */
+        
+        --color-primary: 79 70 229;      /* Indigo-600 (Darker for contrast) */
+        --color-primary-hover: 67 56 202;
+
+        /* Text Colors INVERTED (Dark text on Light bg) */
+        --slate-50: 15 23 42;
+        --slate-100: 15 23 42;    /* Maps to Slate-900 */
+        --slate-200: 30 41 59;    /* Maps to Slate-800 */
+        --slate-300: 51 65 85;    /* Maps to Slate-700 */
+        --slate-400: 100 116 139; /* Maps to Slate-500 */
+        --slate-500: 148 163 184; /* Maps to Slate-400 */
+        --slate-600: 203 213 225; /* Maps to Slate-300 (Light Borders) */
+        --slate-700: 226 232 240; /* Maps to Slate-200 */
+        --slate-800: 241 245 249;
+        --slate-900: 248 250 252;
+      }
+
+      body {
+        background-color: rgb(var(--bg-primary));
+        color: rgb(var(--slate-100));
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      
+      /* Smooth transitions for theme switching */
+      *, *::before, *::after {
+        transition-property: background-color, border-color, color, fill, stroke;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+      }
+
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: rgb(var(--bg-primary)); 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgb(var(--slate-700)); 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgb(var(--color-primary)); 
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react/": "https://esm.sh/react@18.2.0/",
+    "react-dom/": "https://esm.sh/react-dom@18.2.0/",
+    "recharts": "https://esm.sh/recharts@2.12.7?external=react,react-dom",
+    "lucide-react": "https://esm.sh/lucide-react@0.395.0?external=react,react-dom"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+{
+  "name": "PairMind.AI Admin Console",
+  "description": "A high-fidelity, role-based administration console for AI instance management featuring analytics, configuration, and monitoring tools.",
+  "requestFramePermissions": []
+}
